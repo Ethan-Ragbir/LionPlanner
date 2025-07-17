@@ -8,9 +8,9 @@ import SemesterPlanner from './components/SemesterPlanner';
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-100">
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto px-6 py-8">
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
