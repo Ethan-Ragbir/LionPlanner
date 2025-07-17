@@ -1,66 +1,67 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { register } from '../utils/api';
+import api from '../utils/api';
 
 function Register() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await register({ name, email, password });
+      await api.post('/auth/register', formData);
       navigate('/login');
     } catch (err) {
-      setError('Registration failed');
+      setError('Registration failed. Email may already be in use.');
     }
   };
 
   return (
-    <div className="max-w-md mx-auto pt-20">
-      <h1 className="text-3xl font-bold text-tcnj-blue mb-6">Register</h1>
+    <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-lg">
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">Register</h1>
       {error && <p className="text-red-500 mb-4">{error}</p>}
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <div className="mb-4">
-          <label className="block text-tcnj-blue font-semibold mb-2">Name</label>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-gray-700 mb-1">Name</label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-tcnj-gold"
-            placeholder="Enter your name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
+            required
           />
         </div>
-        <div className="mb-4">
-          <label className="block text-tcnj-blue font-semibold mb-2">Email</label>
+        <div>
+          <label className="block text-gray-700 mb-1">Email</label>
           <input
             type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-tcnj-gold"
-            placeholder="Enter your email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
+            required
           />
         </div>
-        <div className="mb-6">
-          <label className="block text-tcnj-blue font-semibold mb-2">Password</label>
+        <div>
+          <label className="block text-gray-700 mb-1">Password</label>
           <input
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-tcnj-gold"
-            placeholder="Enter your password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
+            required
           />
         </div>
         <button
           onClick={handleSubmit}
-          className="w-full bg-tcnj-gold text-tcnj-blue py-2 rounded-lg hover:bg-yellow-400 transition-colors font-semibold"
+          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-300"
         >
           Register
         </button>
       </div>
+      <p className="mt-4 text-gray-600">
+        Already have an account? <a href="/login" className="text-blue-600 hover:underline">Login</a>
+      </p>
     </div>
   );
 }
