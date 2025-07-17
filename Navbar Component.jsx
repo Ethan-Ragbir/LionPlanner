@@ -12,11 +12,9 @@ function Navbar() {
   };
 
   return (
-    <nav className="bg-tcnj-blue text-white shadow-lg fixed w-full z-10">
+    <nav className="bg-blue-700 text-white shadow-lg">
       <div className="container mx-auto flex justify-between items-center p-4">
-        <Link to="/" className="text-2xl font-bold flex items-center">
-          <i className="fas fa-graduation-cap mr-2"></i> Degree Planner
-        </Link>
+        <Link to="/" className="text-2xl font-bold">Degree Planner</Link>
         <div className="md:hidden">
           <button onClick={() => setIsOpen(!isOpen)} className="focus:outline-none">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -24,15 +22,15 @@ function Navbar() {
             </svg>
           </button>
         </div>
-        <div className={`md:flex space-x-6 ${isOpen ? 'block' : 'hidden'} md:block absolute md:static top-16 left-0 w-full md:w-auto bg-tcnj-blue md:bg-transparent p-4 md:p-0`}>
-          <Link to="/" className="block md:inline-block hover:text-tcnj-gold">Home</Link>
-          <Link to="/planner" className="block md:inline-block hover:text-tcnj-gold">Planner</Link>
+        <div className={`md:flex space-x-4 ${isOpen ? 'block' : 'hidden'} md:block`}>
+          <Link to="/" className="hover:underline">Home</Link>
+          <Link to="/planner" className="hover:underline">Planner</Link>
           {token ? (
-            <button onClick={handleLogout} className="block md:inline-block hover:text-tcnj-gold">Logout</button>
+            <button onClick={handleLogout} className="hover:underline">Logout</button>
           ) : (
             <>
-              <Link to="/login" className="block md:inline-block hover:text-tcnj-gold">Login</Link>
-              <Link to="/register" className="block md:inline-block hover:text-tcnj-gold">Register</Link>
+              <Link to="/login" className="hover:underline">Login</Link>
+              <Link to="/register" className="hover:underline">Register</Link>
             </>
           )}
         </div>
