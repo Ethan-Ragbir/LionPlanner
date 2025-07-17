@@ -1,26 +1,28 @@
 import { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { getCourses, addCourse, deleteCourse, getPlan, updatePlan } from '../utils/api';
+import { DragDropContext, Droppable } from 'react-beautiful-dnd';
 import CourseCard from './CourseCard';
-
-const semesters = [
-  'Fall Year 1', 'Spring Year 1', 'Fall Year 2', 'Spring Year 2',
-  'Fall Year 3', 'Spring Year 3', 'Fall Year 4', 'Spring Year 4'
-];
+import api from '../utils/api';
 
 function SemesterPlanner() {
   const [courses, setCourses] = useState([]);
-  const [plan, setPlan] = useState(semesters.reduce((acc, sem) => ({ ...acc, [sem]: [] }), {}));
-  const [newCourse, setNewCourse] = useState({ code: '', title: '', credits: '' });
+  const [semesters, setSemesters] = useState({
+    'Fall 2025': [],
+    'Spring 2026': [],
+    'Fall 2026': [],
+    'Spring 2027': [],
+  });
+  const [newCourse, setNewCourse] = useState({ title: '', code: '', credits: '' });
   const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const coursesRes = await getCourses();
+        const [coursesRes, planRes] = await Promise.all([
+          api.get('/courses'),
+          api.get('/plans'),
+        ]);
         setCourses(coursesRes.data);
-        const planRes = await getPlan();
-        setPlan(planRes.data.semesters || semesters.reduce((acc, sem) => ({ ...acc, [sem]: [] }), {}));
+        setSemesters(planRes.data.semesters);
       } catch (err) {
         setError('Failed to load data');
       }
@@ -30,114 +32,140 @@ function SemesterPlanner() {
 
   const handleAddCourse = async (e) => {
     e.preventDefault();
+    if (!newCourse.title || !newCourse.code || !newCourse.credits) {
+      setError('All fields are required');
+      return;
+    }
     try {
-      const response = await addCourse(newCourse);
-      setCourses([...courses, response.data]);
-      setNewCourse({ code: '', title: '', credits: '' });
+      const res = await api.post('/courses', newCourse);
+      setCourses([...courses, res.data]);
+      setNewCourse({ title: '', code: '', credits: '' });
+      setError('');
     } catch (err) {
-      setError('Failed to add course');
+      setError('Error adding course');
     }
   };
 
   const handleDeleteCourse = async (id) => {
     try {
-      await deleteCourse(id);
+      await api.delete(`/courses/${id}`);
       setCourses(courses.filter((course) => course._id !== id));
-      const updatedPlan = { ...plan };
-      semesters.forEach((sem) => {
-        updatedPlan[sem] = updatedPlan[sem].filter((courseId) => courseId !== id);
-      });
-      setPlan(updatedPlan);
-      await updatePlan(updatedPlan);
+      setSemesters(Object.fromEntries(
+        Object.entries(semesters).map(([semester, courses]) => [
+          semester,
+          courses.filter((course) => course._id !== id),
+        ])
+      ));
     } catch (err) {
-      setError('Failed to delete course');
+      setError('Error deleting course');
     }
   };
 
   const onDragEnd = async (result) => {
-    if (!result.destination) return;
-    const sourceSem = result.source.droppableId;
-    const destSem = result.destination.droppableId;
-    const updatedPlan = { ...plan };
-    const [movedCourse] = updatedPlan[sourceSem].splice(result.source.index, 1);
-    updatedPlan[destSem].splice(result.destination.index, 0, movedCourse);
-    setPlan(updatedPlan);
+    const { source, destination } = result;
+    if (!destination) return;
+
+    const sourceSemester = source.droppableId;
+    const destSemester = destination.droppableId;
+    const course = sourceSemester === 'available' ? courses[source.index] : semesters[sourceSemester][source.index];
+
+    const newSemesters = { ...semesters };
+    if (sourceSemester !== 'available') {
+      newSemesters[sourceSemester].splice(source.index, 1);
+    }
+    if (destSemester !== 'available') {
+      newSemesters[destSemester].splice(destination.index, 0, course);
+    }
+
+    setSemesters(newSemesters);
+
     try {
-      await updatePlan(updatedPlan);
+      await api.put('/plans', { semesters: newSemesters });
     } catch (err) {
-      setError('Failed to update plan');
+      setError('Error saving plan');
     }
   };
 
   return (
-    <div className="pt-20">
-      <h1 className="text-3xl font-bold text-tcnj-blue mb-6">Semester Planner</h1>
+    <div>
+      <h1 className="text-3xl font-bold text-gray-800 mb-6">Semester Planner</h1>
       {error && <p className="text-red-500 mb-4">{error}</p>}
-      <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
-        <h2 className="text-xl font-semibold text-tcnj-blue mb-4">Add Course</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Add New Course</h2>
+        <div className="flex space-x-4">
           <input
             type="text"
-            value={newCourse.code}
-            onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value })}
-            className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-tcnj-gold"
-            placeholder="Course Code (e.g., PHY 201)"
+            placeholder="Course Title"
+            value={newCourse.title}
+            onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })}
+            className="border p-2 rounded flex-1 focus:outline-none focus:ring-2 focus:ring-blue-600"
           />
           <input
             type="text"
-            value={newCourse.title}
-            onChange={(e) => setNewCourse({ ...newCourse, title: e.target.value })}
-            className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-tcnj-gold"
-            placeholder="Course Title (e.g., General Physics I)"
+            placeholder="Course Code"
+            value={newCourse.code}
+            onChange={(e) => setNewCourse({ ...newCourse, code: e.target.value })}
+            className="border p-2 rounded flex-1 focus:outline-none focus:ring-2 focus:ring-blue-600"
           />
           <input
             type="number"
+            placeholder="Credits"
             value={newCourse.credits}
             onChange={(e) => setNewCourse({ ...newCourse, credits: e.target.value })}
-            className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-tcnj-gold"
-            placeholder="Credits (e.g., 4)"
+            className="border p-2 rounded w-24 focus:outline-none focus:ring-2 focus:ring-blue-600"
           />
+          <button
+            onClick={handleAddCourse}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-300"
+          >
+            Add Course
+          </button>
         </div>
-        <button
-          onClick={handleAddCourse}
-          className="mt-4 bg-tcnj-gold text-tcnj-blue py-2 px-6 rounded-lg hover:bg-yellow-400 transition-colors font-semibold"
-        >
-          Add Course
-        </button>
       </div>
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {semesters.map((semester) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Object.keys(semesters).map((semester) => (
             <Droppable droppableId={semester} key={semester}>
               {(provided) => (
                 <div
-                  {...provided.droppableProps}
                   ref={provided.innerRef}
-                  className="bg-white p-4 rounded-lg shadow-md"
+                  {...provided.droppableProps}
+                  className="bg-gray-100 p-4 rounded-lg shadow-sm"
                 >
-                  <h2 className="text-lg font-semibold text-tcnj-blue mb-4">{semester}</h2>
-                  {plan[semester].map((courseId, index) => {
-                    const course = courses.find((c) => c._id === courseId);
-                    return course ? (
-                      <Draggable key={courseId} draggableId={courseId} index={index}>
-                        {(provided) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className="mb-2"
-                          >
-                            <CourseCard course={course} onDelete={handleDeleteCourse} />
-                          </div>
-                        )}
-                      </Draggable>
-                    ) : null;
-                  })}
+                  <h2 className="text-xl font-semibold mb-4 text-gray-800">{semester}</h2>
+                  {semesters[semester].map((course, index) => (
+                    <CourseCard
+                      key={course._id}
+                      course={course}
+                      index={index}
+                      onDelete={handleDeleteCourse}
+                    />
+                  ))}
                   {provided.placeholder}
                 </div>
               )}
             </Droppable>
           ))}
+          <Droppable droppableId="available">
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="bg-gray-100 p-4 rounded-lg shadow-sm"
+              >
+                <h2 className="text-xl font-semibold mb-4 text-gray-800">Available Courses</h2>
+                {courses.map((course, index) => (
+                  <CourseCard
+                    key={course._id}
+                    course={course}
+                    index={index}
+                    onDelete={handleDeleteCourse}
+                  />
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
         </div>
       </DragDropContext>
     </div>
