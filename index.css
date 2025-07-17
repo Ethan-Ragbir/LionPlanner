@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* TCNJ-inspired styles */
+.bg-tcnj-blue {
+  background-color: #003087;
+}
+.text-tcnj-gold {
+  color: #FFC107;
+}
+.bg-tcnj-gold {
+  background-color: #FFC107;
+}
